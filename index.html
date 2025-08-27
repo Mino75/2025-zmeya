@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>zmeya 🐍</title>
+  <meta name="description" content="zmeya — snake that eats bugs, entangles bosses, and wins in 5 levels." />
+</head>
+<body>
+  <div id="app" role="application" aria-label="zmeya">
+    <header class="topbar">
+      <h1 class="title">zmeya 🐍</h1>
+      <div class="hud">
+        <div class="hud-group">
+          <span>Level:</span><strong id="level">1/5</strong>
+        </div>
+        <div class="hud-group">
+          <span>Score:</span><strong id="score">0</strong>
+        </div>
+        <div class="hud-group">
+          <span>Best:</span><strong id="best">0</strong>
+        </div>
+        <div class="hud-group hide-sm">
+          <span>Speed:</span><strong id="speed">1x</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div id="game-wrap" class="game-wrap">
+        <canvas id="game" width="360" height="540" aria-label="Snake playfield"></canvas>
+
+        <!-- Overlay messages -->
+        <div id="overlay" class="overlay" aria-live="polite"></div>
+
+        <!-- Floating toasts for names -->
+        <div id="toasts" class="toasts"></div>
+
+        <!-- On-screen controls (mobile-first) -->
+        <div id="controls" class="controls" aria-label="Touch Controls">
+          <button class="btn dir up" data-dir="up" aria-label="Move Up">▲</button>
+          <div class="mid-row">
+            <button class="btn dir left" data-dir="left" aria-label="Move Left">◀</button>
+            <button class="btn action pause" id="pauseBtn" aria-label="Pause/Resume">⏯</button>
+            <button class="btn dir right" data-dir="right" aria-label="Move Right">▶</button>
+          </div>
+          <button class="btn dir down" data-dir="down" aria-label="Move Down">▼</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="row">
+          <button id="startBtn" class="btn primary" aria-label="Start or Restart">Start / Restart</button>
+          <button id="pauseTop" class="btn ghost" aria-label="Pause/Resume">Pause</button>
+        </div>
+        <details class="tips">
+          <summary>How to play</summary>
+          <ul>
+            <li>Swipe or use the ▲◀▶▼ to steer.</li>
+            <li>Eat bugs to grow: 🐌🦋🐛🐜🐝🪲🐞🦗🪳🕷️🦂🦟🪰🪱</li>
+            <li>You only die if you <em>eat your tail</em>. Edges wrap. Body is pass-through.</li>
+            <li>5 levels: bosses on 2–5 (🐊 🐅 🐘 🦖). Entangle by blocking the four sides.</li>
+            <li>Every defeated bug/boss flashes its name in mg/fr/cn/jp/ru.</li>
+          </ul>
+        </details>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>zmeya • vanilla JS • mobile-first</small>
+    </footer>
+  </div>
+
+  <script src="./styles.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>
