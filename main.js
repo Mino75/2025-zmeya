@@ -1,274 +1,445 @@
-/* zmeya fixes:
-   - Removed template literals to avoid invisible-char issues
-   - Decor >= 7–10 items
-   - Round snake head
-   - Boss 2×, decor 3×, viewport-fit canvas
+'use strict';
+
+/*
+ ZMEYA — Emoji Snake (Verbose Edition)
+ ------------------------------------
+ Fully cleaned version: pad-only controls, no arrow cluster.
 */
-(function () {
-  // Data
-  var LANGS = ["mg","fr","cn","jp","ru"];
-  var INSECTS = [
-    {emoji:"🐌", names:{en:"snail",fr:"escargot",cn:"蜗牛",jp:"カタツムリ",ru:"улитка",mg:"sokina"}},
-    {emoji:"🦋", names:{en:"butterfly",fr:"papillon",cn:"蝴蝶",jp:"チョウ",ru:"бабочка",mg:"lolo"}},
-    {emoji:"🐛", names:{en:"caterpillar",fr:"chenille",cn:"毛毛虫",jp:"いもむし",ru:"гусеница",mg:"kankana"}},
-    {emoji:"🐜", names:{en:"ant",fr:"fourmi",cn:"蚂蚁",jp:"アリ",ru:"муравей",mg:"vitsika"}},
-    {emoji:"🐝", names:{en:"bee",fr:"abeille",cn:"蜜蜂",jp:"ハチ",ru:"пчела",mg:"tantely"}},
-    {emoji:"🪲", names:{en:"beetle",fr:"scarabée",cn:"甲虫",jp:"甲虫",ru:"жук",mg:"voangory"}},
-    {emoji:"🐞", names:{en:"ladybug",fr:"coccinelle",cn:"瓢虫",jp:"テントウムシ",ru:"божья коровка",mg:"voangory mena"}},
-    {emoji:"🦗", names:{en:"cricket",fr:"grillon",cn:"蟋蟀",jp:"コオロギ",ru:"сверчок",mg:"valala"}},
-    {emoji:"🪳", names:{en:"cockroach",fr:"cafard",cn:"蟑螂",jp:"ゴキブリ",ru:"тараканы",mg:"kadradraka"}},
-    {emoji:"🕷️", names:{en:"spider",fr:"araignée",cn:"蜘蛛",jp:"クモ",ru:"паук",mg:"hala"}},
-    {emoji:"🦂", names:{en:"scorpion",fr:"scorpion",cn:"蝎子",jp:"サソリ",ru:"скорпион",mg:"sokorpiona"}},
-    {emoji:"🦟", names:{en:"mosquito",fr:"moustique",cn:"蚊子",jp:"カ",ru:"комар",mg:"moka"}},
-    {emoji:"🪰", names:{en:"housefly",fr:"mouche",cn:"苍蝇",jp:"ハエ",ru:"муха",mg:"lolo vola"}},
-    {emoji:"🪱", names:{en:"earthworm",fr:"ver de terre",cn:"蚯蚓",jp:"ミミズ",ru:"дождевой червь",mg:"olitra"}}
-  ];
-  var BOSSES = [
-    {emoji:"🐊", names:{en:"crocodile",fr:"crocodile",cn:"鳄鱼",jp:"ワニ",ru:"крокодил",mg:"voay"}},
-    {emoji:"🐅", names:{en:"tiger",fr:"tigre",cn:"老虎",jp:"トラ",ru:"тигр",mg:"tigra"}},
-    {emoji:"🐘", names:{en:"elephant",fr:"éléphant",cn:"大象",jp:"ゾウ",ru:"слон",mg:"elefanta"}},
-    {emoji:"🦖", names:{en:"T-Rex",fr:"tyrannosaure",cn:"霸王龙",jp:"ティラノサウルス",ru:"тираннозавр",mg:"tiranosoro"}}
-  ];
-  var DECOR = ["🌸","💮","🪷","🏵️"];
 
-  // Config
-  var GROWTH_PER_BUG = 2, START_SPEED_MS = 180, MIN_SPEED_MS = 70, SPEEDUP_PER_EAT = 6;
-  var MAX_BUGS = 4, BUG_TTL_SEC = 10, GRID_MIN = 12;
-  var LEVELS = [
-    {n:1,boss:null,intro:"Warm-up. Eat 10 bugs to advance.",eatGoal:10},
-    {n:2,boss:BOSSES[0],intro:"Boss appears! Entangle it by blocking its four sides.",eatGoal:0},
-    {n:3,boss:BOSSES[1],intro:"Watch the stripes… entangle again!",eatGoal:0},
-    {n:4,boss:BOSSES[2],intro:"Big feet, bigger circle.",eatGoal:0},
-    {n:5,boss:BOSSES[3],intro:"Final boss. Lasso the dino!",eatGoal:0}
+(function ZmeyaVerboseIIFE() {
+  // -----------------------------
+  // Section: Static Data
+  // -----------------------------
+
+  const LANGS = ["mg", "fr", "cn", "jp", "ru"];
+
+  const INSECTS = [
+    { emoji: "🐌", names: { en: "snail", fr: "escargot", cn: "蜗牛", jp: "カタツムリ", ru: "улитка", mg: "sokina" } },
+    { emoji: "🦋", names: { en: "butterfly", fr: "papillon", cn: "蝴蝶", jp: "チョウ", ru: "бабочка", mg: "lolo" } },
+    { emoji: "🐛", names: { en: "caterpillar", fr: "chenille", cn: "毛毛虫", jp: "いもむし", ru: "гусеница", mg: "kankana" } },
+    { emoji: "🐜", names: { en: "ant", fr: "fourmi", cn: "蚂蚁", jp: "アリ", ru: "муравей", mg: "vitsika" } },
+    { emoji: "🐝", names: { en: "bee", fr: "abeille", cn: "蜜蜂", jp: "ハチ", ru: "пчела", mg: "tantely" } },
+    { emoji: "🪲", names: { en: "beetle", fr: "scarabée", cn: "甲虫", jp: "甲虫", ru: "жук", mg: "voangory" } },
+    { emoji: "🐞", names: { en: "ladybug", fr: "coccinelle", cn: "瓢虫", jp: "テントウムシ", ru: "божья коровка", mg: "voangory mena" } },
+    { emoji: "🦗", names: { en: "cricket", fr: "grillon", cn: "蟋蟀", jp: "コオロギ", ru: "сверчок", mg: "valala" } },
+    { emoji: "🪳", names: { en: "cockroach", fr: "cafard", cn: "蟑螂", jp: "ゴキブリ", ru: "тараканы", mg: "kadradraka" } },
+    { emoji: "🕷️", names: { en: "spider", fr: "araignée", cn: "蜘蛛", jp: "クモ", ru: "паук", mg: "hala" } },
+    { emoji: "🦂", names: { en: "scorpion", fr: "scorpion", cn: "蝎子", jp: "サソリ", ru: "скорпион", mg: "sokorpiona" } },
+    { emoji: "🦟", names: { en: "mosquito", fr: "moustique", cn: "蚊子", jp: "カ", ru: "комар", mg: "moka" } },
+    { emoji: "🪰", names: { en: "housefly", fr: "mouche", cn: "苍蝇", jp: "ハエ", ru: "муха", mg: "lolo vola" } },
+    { emoji: "🪱", names: { en: "earthworm", fr: "ver de terre", cn: "蚯蚓", jp: "ミミズ", ru: "дождевой червь", mg: "olitra" } },
   ];
 
-  // DOM
-  var $ = function (s) { return document.querySelector(s); };
-  var canvas = $("#game"), ctx = canvas.getContext("2d");
-  var overlay = $("#overlay"), toasts = $("#toasts");
-  var scoreEl = $("#score"), bestEl = $("#best"), speedEl = $("#speed"), levelEl = $("#level");
-  var startBtn = $("#startBtn"), pauseTopBtn = $("#pauseTop"), pauseBtn = $("#pauseBtn");
-  var dirBtns = document.querySelectorAll(".btn.dir");
+  const BOSSES = [
+    { emoji: "🐊", names: { en: "crocodile", fr: "crocodile", cn: "鳄鱼", jp: "ワニ", ru: "крокодил", mg: "voay" } },
+    { emoji: "🐅", names: { en: "tiger", fr: "tigre", cn: "老虎", jp: "トラ", ru: "тигр", mg: "tigra" } },
+    { emoji: "🐘", names: { en: "elephant", fr: "éléphant", cn: "大象", jp: "ゾウ", ru: "слон", mg: "elefanta" } },
+    { emoji: "🦖", names: { en: "T-Rex", fr: "tyrannosaure", cn: "霸王龙", jp: "ティラノサウルス", ru: "тираннозавр", mg: "tiranosoro" } },
+  ];
 
-  // State
-  var grid = { cols: 24, rows: 36, size: 16 };
-  var snake = [], dir = {x:1,y:0}, nextDir = {x:1,y:0}, growth = 0;
-  var bugs = [], decor = [];
-  var score = 0, best = Number(localStorage.getItem("zmeyaHighScoreV1") || 0);
-  var speedMs = START_SPEED_MS, loop = null, running = false, paused = false, lastTickAt = 0, eatenCount = 0;
-  var level = 1, boss = null, bossPos = null, bossAlive = false;
+  const DECOR = ["🌸", "💮", "🪷", "🏵️", "🌾", "🌻", "🌼", "🌷"];
 
-  // Fit canvas to element (avoid page scroll; CSS sets height)
-  function fitCanvas() {
-    var rect = canvas.getBoundingClientRect();
-    var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  // -----------------------------
+  // Section: Tunable Config
+  // -----------------------------
+
+  const GROWTH_PER_BUG = 2;
+  const START_SPEED_MS = 180;
+  const MIN_SPEED_MS = 70;
+  const SPEEDUP_PER_EAT = 6;
+
+  const MAX_BUGS = 6;
+  const BUG_TTL_SEC = 15;
+  const GRID_MIN = 12;
+
+  const LEVELS = [
+    { n: 1, boss: null,      intro: "Warm-up. Eat 10 bugs to advance.",             eatGoal: 10 },
+    { n: 2, boss: BOSSES[0], intro: "Boss appears! Entangle it by blocking its four sides.", eatGoal: 0 },
+    { n: 3, boss: BOSSES[1], intro: "Watch the stripes… entangle again!",            eatGoal: 0 },
+    { n: 4, boss: BOSSES[2], intro: "Big feet, bigger circle.",                      eatGoal: 0 },
+    { n: 5, boss: BOSSES[3], intro: "Final boss. Lasso the dino!",                   eatGoal: 0 },
+  ];
+
+  // -----------------------------
+  // Section: DOM Handles
+  // -----------------------------
+
+  const $ = (sel) => document.querySelector(sel);
+
+  const canvas = $("#game");
+  const ctx = canvas.getContext("2d");
+
+  const overlayEl = $("#overlay");
+  const toastsEl = $("#toasts");
+  const scoreEl = $("#score");
+  const bestEl  = $("#best");
+  const speedEl = $("#speed");
+  const levelEl = $("#level");
+
+  const startBtn    = $("#startBtn");
+  const pauseTopBtn = $("#pauseTop");
+  const padEl       = $("#pad"); // NEW: the only on-screen control
+
+  // -----------------------------
+  // Section: Mutable Game State
+  // -----------------------------
+
+  let grid = { cols: 24, rows: 36, size: 16 };
+  let snake = [];
+  let dir = { x: 1, y: 0 };
+  let nextDir = { x: 1, y: 0 };
+  let growthOwed = 0;
+  let bugs = [];
+  let decor = [];
+  let score = 0;
+  let best = Number(localStorage.getItem("zmeyaHighScoreV1") || 0);
+  let speedMs = START_SPEED_MS;
+
+  let rafHandle = null;
+  let running = false;
+  let paused = false;
+  let lastTickAt = 0;
+
+  let eatenThisLevel = 0;
+  let level = 1;
+
+  let boss = null;
+  let bossCell = null;
+  let bossAlive = false;
+
+  let nextBugSpawnAtSec = 0;
+
+  // -----------------------------
+  // Section: Canvas Sizing & Grid
+  // -----------------------------
+
+  function fitCanvasToElement() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     canvas.width = Math.floor(rect.width * dpr);
     canvas.height = Math.floor(rect.height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    var target = 26;
-    var cols = Math.max(GRID_MIN, Math.floor(rect.width / target));
-    var rows = Math.max(GRID_MIN, Math.floor(rect.height / target));
-    var size = Math.floor(Math.min(rect.width / cols, rect.height / rows));
-    grid = { cols: cols, rows: rows, size: size };
+    const targetCellPx = 26;
+    const cols = Math.max(GRID_MIN, Math.floor(rect.width / targetCellPx));
+    const rows = Math.max(GRID_MIN, Math.floor(rect.height / targetCellPx));
+    const size = Math.floor(Math.min(rect.width / cols, rect.height / rows));
+    grid = { cols, rows, size };
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
   }
 
-  // Utils
-  function randInt(n){ return Math.floor(Math.random()*n); }
-  function pick(a){ return a[randInt(a.length)]; }
-  function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
-  function nowSec(){ return Date.now()/1000; }
-  function wrapX(x){ return (x + grid.cols) % grid.cols; }
-  function wrapY(y){ return (y + grid.rows) % grid.rows; }
-  function vibrate(ms){ if (navigator.vibrate) navigator.vibrate(ms); }
+  // -----------------------------
+  // Section: Small Utilities
+  // -----------------------------
 
-  function emptyCell(avoidBoss){
-    if (avoidBoss === void 0) avoidBoss = true;
-    var t=0;
-    while(t++<1000){
-      var x = randInt(grid.cols), y = randInt(grid.rows);
-      var onSnake = snake.some(function(s){ return s.x===x && s.y===y; });
-      var onBug = bugs.some(function(b){ return b.x===x && b.y===y; });
-      var onBoss = avoidBoss && bossAlive && bossPos && bossPos.x===x && bossPos.y===y;
-      if(!onSnake && !onBug && !onBoss) return {x:x,y:y};
+  const randInt = (n) => Math.floor(Math.random() * n);
+  const pick = (arr) => arr[randInt(arr.length)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const nowSec = () => Date.now() / 1000;
+  const wrapX = (x) => (x + grid.cols) % grid.cols;
+  const wrapY = (y) => (y + grid.rows) % grid.rows;
+  const vibrate = (ms) => { if (navigator.vibrate) navigator.vibrate(ms); };
+
+  function pickEmptyCell(avoidBoss = true) {
+    let attempts = 0;
+    while (attempts++ < 1000) {
+      const x = randInt(grid.cols);
+      const y = randInt(grid.rows);
+      const hitsSnake = snake.some((s) => s.x === x && s.y === y);
+      const hitsBug = bugs.some((b) => b.x === x && b.y === y);
+      const hitsBoss = avoidBoss && bossAlive && bossCell && bossCell.x === x && bossCell.y === y;
+      if (!hitsSnake && !hitsBug && !hitsBoss) return { x, y };
     }
-    return {x:Math.floor(grid.cols/2), y:Math.floor(grid.rows/2)};
+    return { x: Math.floor(grid.cols / 2), y: Math.floor(grid.rows / 2) };
   }
 
-  function showCard(title, desc, cta){
-    overlay.innerHTML =
-      '<div class="card"><h2>' + title + '</h2><p>' + desc + '</p><p><em>' + (cta||'') + '</em></p></div>';
+  // overlay + toasts
+  function showCard(title, desc, cta = "") {
+    overlayEl.innerHTML =
+      '<div class="card"><h2>' + title + '</h2><p>' + desc + '</p><p><em>' + cta + '</em></p></div>';
   }
-  function clearCard(){ overlay.innerHTML = ""; }
+  function clearCard() { overlayEl.innerHTML = ""; }
 
-  function flashToast(text, xPct, yPct){
-    var el = document.createElement("div");
+  function flashToast(text, xPct = null, yPct = null) {
+    const el = document.createElement("div");
     el.className = "toast";
     el.textContent = text;
-    var left = (xPct != null ? xPct : clamp(Math.random()*100, 8, 92));
-    var top = (yPct != null ? yPct : clamp(Math.random()*100, 12, 88));
+    const left = xPct != null ? xPct : clamp(Math.random() * 100, 8, 92);
+    const top  = yPct != null ? yPct : clamp(Math.random() * 100, 12, 88);
     el.style.left = left + "%";
     el.style.top = top + "%";
-    toasts.appendChild(el);
-    setTimeout(function(){ el.remove(); }, 1300);
+    toastsEl.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
   }
-  function randomLangName(entry){
-    var lang = pick(LANGS);
+  function randomLangName(entry) {
+    const lang = pick(LANGS);
     return entry.names[lang] || entry.names.en;
   }
 
-  // Decor (ensure >= 7..10 items)
-  function seedDecor(){
+  // -----------------------------
+  // Section: Decor
+  // -----------------------------
+
+  function seedDecor() {
     decor = [];
-    var base = Math.floor((grid.cols * grid.rows) / 120);
-    var minWanted = 7 + randInt(4); // 7..10
-    var count = Math.max(minWanted, base);
-    for (var i=0;i<count;i++){
-      var pos = emptyCell(false);
-      decor.push({x:pos.x, y:pos.y, emoji: pick(DECOR), alpha: 0.2 + Math.random()*0.35});
+    const baseByArea = Math.floor((grid.cols * grid.rows) / 120);
+    const minWanted = 15 + randInt(7);
+    const count = Math.max(minWanted, baseByArea);
+
+    // ≥ 3 cells apart
+    const okDistance = (x, y) => decor.every((d) => {
+      const dx = d.x - x, dy = d.y - y;
+      return (dx * dx + dy * dy) >= 9;
+    });
+
+    for (let i = 0; i < count; i++) {
+      let pos = null, tries = 0;
+      while (tries++ < 500) {
+        const c = pickEmptyCell(false);
+        if (okDistance(c.x, c.y)) { pos = c; break; }
+      }
+      if (!pos) pos = pickEmptyCell(false);
+      decor.push({ x: pos.x, y: pos.y, emoji: pick(DECOR), alpha: 0.2 + Math.random() * 0.35 });
     }
   }
 
-  // Bugs
-  var nextSpawnAt = 0;
-  function maybeSpawnBug(){
-    var t = nowSec();
-    if (t >= nextSpawnAt && bugs.length < MAX_BUGS){
-      var pos = emptyCell();
-      var entry = pick(INSECTS);
-      bugs.push({x:pos.x, y:pos.y, entry:entry, expiresAt: t + BUG_TTL_SEC});
-      nextSpawnAt = t + (0.8 + Math.random()*1.4);
+  // -----------------------------
+  // Section: Bugs (Edibles)
+  // -----------------------------
+
+  function maybeSpawnBug() {
+    const t = nowSec();
+    if (t >= nextBugSpawnAtSec && bugs.length < MAX_BUGS) {
+      const pos = pickEmptyCell(true);
+      const entry = pick(INSECTS);
+      bugs.push({ x: pos.x, y: pos.y, entry, expiresAt: t + BUG_TTL_SEC });
+      nextBugSpawnAtSec = t + (0.8 + Math.random() * 1.4);
     }
-    bugs = bugs.filter(function(b){ return b.expiresAt > t; });
+    bugs = bugs.filter((b) => b.expiresAt > t);
   }
 
-  // Boss
-  function spawnBossIfNeeded(){
-    var plan = LEVELS[level-1];
+  // -----------------------------
+  // Section: Boss Handling
+  // -----------------------------
+
+  function pickEmptyCellWithMargin(margin) {
+    let attempts = 0;
+    while (attempts++ < 1000) {
+      const x = margin + randInt(Math.max(1, grid.cols - margin * 2));
+      const y = margin + randInt(Math.max(1, grid.rows - margin * 2));
+      const hitsSnake = snake.some((s) => s.x === x && s.y === y);
+      const hitsBug   = bugs.some((b) => b.x === x && b.y === y);
+      const hitsBoss  = bossAlive && bossCell && bossCell.x === x && bossCell.y === y;
+      if (!hitsSnake && !hitsBug && !hitsBoss) return { x, y };
+    }
+    return {
+      x: clamp(Math.floor(grid.cols / 2), margin, grid.cols - 1 - margin),
+      y: clamp(Math.floor(grid.rows / 2), margin, grid.rows - 1 - margin),
+    };
+  }
+
+  function spawnBossIfNeeded() {
+    const plan = LEVELS[level - 1];
     if (!plan || !plan.boss) return;
     boss = plan.boss;
-    bossPos = emptyCell(false);
+    bossCell = pickEmptyCellWithMargin(4); // ≥4 from edges
     bossAlive = true;
   }
-  function bossEntangled(){
-    if (!bossAlive) return false;
-    var x=bossPos.x, y=bossPos.y;
-    function has(cx,cy){ return snake.some(function(s){ return s.x===wrapX(cx) && s.y===wrapY(cy); }); }
-    return has(x-1,y) && has(x+1,y) && has(x,y-1) && has(x,y+1);
-  }
-  function defeatBoss(){
+
+// Boss is entangled if on each orthogonal side (L/R/U/D)
+// there is at least one snake segment at distance 1 or 2.
+// Toroidal wrapping still applies.
+function isBossEntangled() {
+  if (!bossAlive || !bossCell) return false;
+
+  const x = bossCell.x, y = bossCell.y;
+  const hasAt = (cx, cy) => snake.some(s => s.x === wrapX(cx) && s.y === wrapY(cy));
+
+  // side is blocked if distance 1 OR 2 in that direction has a snake segment
+  const blocked = (dx, dy) => (
+    hasAt(x + dx, y + dy) || hasAt(x + 2*dx, y + 2*dy)
+  );
+
+  return (
+    blocked(-1, 0) &&  // left
+    blocked( 1, 0) &&  // right
+    blocked( 0,-1) &&  // up
+    blocked( 0, 1)     // down
+  );
+}
+
+
+  function defeatBoss() {
     bossAlive = false;
     score += 150;
     flashToast(randomLangName(boss));
     advanceLevel();
   }
 
-  // Levels
+  // -----------------------------
+  // Section: Level Flow
+  // -----------------------------
+
   function startLevel(n){
     level = n;
     levelEl.textContent = level + "/5";
-    eatenCount = 0;
-    bossAlive = false; boss = null; bossPos = null;
-    var plan = LEVELS[level-1];
+    eatenThisLevel = 0;
+    bossAlive = false; boss = null; bossCell = null;
+    const plan = LEVELS[level-1];
     if (plan && plan.boss) spawnBossIfNeeded();
-    showCard("Level " + level, (plan && plan.intro) ? plan.intro : "", "Tap Start to play");
+
+    showCard("Level " + level, (plan && plan.intro) ? plan.intro : "", "");
+    setTimeout(() => { if (!paused) clearCard(); }, 1200);
   }
-  function advanceLevel(){
-    if (level >= 5){
-      stop();
+
+  function advanceLevel() {
+    if (level >= 5) {
+      stopGameLoop();
       best = Math.max(best, score);
       localStorage.setItem("zmeyaHighScoreV1", String(best));
       updateHUD();
-      showCard("You win! 🎉", "Final Score: <span class=\"big\">" + score + "</span>", "Start to play again");
+      showCard("You win! 🎉", 'Final Score: <span class="big">' + score + "</span>", "Start to play again");
       return;
     }
-    startLevel(level+1);
+    startLevel(level + 1);
   }
 
-  // Lifecycle
-  function reset(){
-    score = 0; speedMs = START_SPEED_MS; bugs = []; growth = 0;
-    dir = {x:1,y:0}; nextDir = {x:1,y:0};
-    var cx = Math.floor(grid.cols/2), cy = Math.floor(grid.rows/2);
-    snake = [{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
-    seedDecor(); startLevel(1); updateHUD(); paused = false;
-  }
-  function start(){ if (running) stop(); running=true; paused=false; clearCard(); lastTickAt=performance.now(); scheduleLoop(); }
-  function stop(){ running=false; if(loop) cancelAnimationFrame(loop); loop=null; }
-  function pauseToggle(){ if(!running) return; paused=!paused; if(paused) showCard("Paused","⏯ to resume"); else clearCard(); }
+  // -----------------------------
+  // Section: Game Lifecycle
+  // -----------------------------
 
-  // Loop
-  function scheduleLoop(){
-    function step(t){
+  function resetGame() {
+    score = 0;
+    speedMs = START_SPEED_MS;
+    bugs = [];
+    growthOwed = 0;
+    dir = { x: 1, y: 0 };
+    nextDir = { x: 1, y: 0 };
+
+    const cx = Math.floor(grid.cols / 2);
+    const cy = Math.floor(grid.rows / 2);
+    snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+
+    seedDecor();
+    startLevel(1);
+    updateHUD();
+    paused = false;
+  }
+
+  function startGame() {
+    if (running) stopGameLoop();
+    running = true;
+    paused = false;
+    clearCard();
+    lastTickAt = performance.now();
+    scheduleLoop();
+  }
+
+  function stopGameLoop() {
+    running = false;
+    if (rafHandle) cancelAnimationFrame(rafHandle);
+    rafHandle = null;
+  }
+
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    if (paused) showCard("Paused", "⏯ to resume"); else clearCard();
+  }
+
+  // -----------------------------
+  // Section: Main Loop
+  // -----------------------------
+
+  function scheduleLoop() {
+    function step(t) {
       if (!running) return;
-      if (!paused && t - lastTickAt >= speedMs){ tick(); lastTickAt = t; }
-      loop = requestAnimationFrame(step);
+      if (!paused && t - lastTickAt >= speedMs) {
+        tick();
+        lastTickAt = t;
+      }
+      rafHandle = requestAnimationFrame(step);
     }
-    loop = requestAnimationFrame(step);
+    rafHandle = requestAnimationFrame(step);
   }
 
-  function setDir(x,y){ nextDir = {x:x, y:y}; }
+  function setDirection(x, y) { nextDir = { x, y }; }
 
-  function tick(){
+  function tick() {
     maybeSpawnBug();
+
     dir = nextDir;
-    var head = snake[0];
-    var nx = wrapX(head.x + dir.x), ny = wrapY(head.y + dir.y);
 
-    // Tail-eating death only
-    var tail = snake[snake.length-1];
-    if (nx === tail.x && ny === tail.y){ return gameOver("Tail eaten!"); }
+    const head = snake[0];
+    const nx = wrapX(head.x + dir.x);
+    const ny = wrapY(head.y + dir.y);
 
-    // Boss cannot be eaten
-    if (bossAlive && bossPos && nx===bossPos.x && ny===bossPos.y){ return gameOver("Boss bite!"); }
+    const tail = snake[snake.length - 1];
+    if (nx === tail.x && ny === tail.y) return gameOver("Tail eaten!");
 
-    snake.unshift({x:nx, y:ny});
-
-    // Eat bug?
-    var eatenIdx = bugs.findIndex(function(b){ return b.x===nx && b.y===ny; });
-    if (eatenIdx >= 0){
-      var eaten = bugs.splice(eatenIdx, 1)[0];
-      growth += GROWTH_PER_BUG; score += 10; eatenCount++;
-      speedMs = Math.max(MIN_SPEED_MS, speedMs - SPEEDUP_PER_EAT); updateHUD(true); vibrate(20);
-      flashToast(randomLangName(eaten.entry));
-      var plan = LEVELS[level-1];
-      if (plan && plan.eatGoal && eatenCount >= plan.eatGoal) advanceLevel();
+    if (bossAlive && bossCell && nx === bossCell.x && ny === bossCell.y) {
+      return gameOver("Boss bite!");
     }
 
-    if (growth > 0) growth--; else snake.pop();
+    snake.unshift({ x: nx, y: ny });
 
-    if (bossAlive && bossEntangled()) defeatBoss();
+    const eatenIdx = bugs.findIndex((b) => b.x === nx && b.y === ny);
+    if (eatenIdx >= 0) {
+      const eaten = bugs.splice(eatenIdx, 1)[0];
+      growthOwed += GROWTH_PER_BUG;
+      score += 10;
+      eatenThisLevel++;
 
-    draw();
+      speedMs = Math.max(MIN_SPEED_MS, speedMs - SPEEDUP_PER_EAT);
+      updateHUD(true);
+      vibrate(20);
+      flashToast(randomLangName(eaten.entry));
+
+      const plan = LEVELS[level - 1];
+      if (plan && plan.eatGoal && eatenThisLevel >= plan.eatGoal) advanceLevel();
+    }
+
+    if (growthOwed > 0) growthOwed--; else snake.pop();
+
+    if (bossAlive && isBossEntangled()) defeatBoss();
+
+    drawFrame();
   }
 
-  function gameOver(reason){
-    stop();
+  function gameOver(reason) {
+    stopGameLoop();
     best = Math.max(best, score);
     localStorage.setItem("zmeyaHighScoreV1", String(best));
     updateHUD();
     showCard("Game Over 💀", String(reason), "Tap Start / Restart");
-    try { vibrate(80); } catch(e) {}
+    try { vibrate(80); } catch (_) {}
   }
 
-  // Drawing
-  function clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
-  function draw(){
-    clear();
-    var s = grid.size;
-    var foodFont = Math.floor(s * 0.9);
-    var decorFont = Math.floor(foodFont * 3);
-    var bossFont = Math.floor(foodFont * 2);
+  // -----------------------------
+  // Section: Rendering
+  // -----------------------------
+
+  function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+  function drawFrame() {
+    clearCanvas();
+
+    const s = grid.size;
+    const bugFontPx = Math.floor(s * 0.9);
+    const decorFontPx = Math.floor(bugFontPx * 3);
+    const bossFontPx = Math.floor(bugFontPx * 2);
 
     // decor
     ctx.save();
-    ctx.globalAlpha = 1; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = String(decorFont) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
-    for (var i=0;i<decor.length;i++){
-      var d = decor[i];
-      var dcx = d.x * s + s/2, dcy = d.y * s + s/2;
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = String(decorFontPx) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
+    for (let i = 0; i < decor.length; i++) {
+      const d = decor[i];
+      const dcx = d.x * s + s / 2;
+      const dcy = d.y * s + s / 2;
       ctx.globalAlpha = d.alpha;
       ctx.fillText(d.emoji, dcx, dcy);
     }
@@ -277,120 +448,248 @@
 
     // bugs
     ctx.save();
-    ctx.font = String(foodFont) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
-    for (var j=0;j<bugs.length;j++){
-      var b = bugs[j];
-      var bx = b.x * s + s/2, by = b.y * s + s/2;
-      ctx.globalAlpha = Math.min(1, Math.max(0.35, (b.expiresAt - nowSec())/BUG_TTL_SEC + 0.2));
+    ctx.font = String(bugFontPx) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
+    for (let j = 0; j < bugs.length; j++) {
+      const b = bugs[j];
+      const bx = b.x * s + s / 2;
+      const by = b.y * s + s / 2;
+      const lifeFrac = (b.expiresAt - nowSec()) / BUG_TTL_SEC + 0.2;
+      ctx.globalAlpha = Math.min(1, Math.max(0.35, lifeFrac));
       ctx.fillText(b.entry.emoji, bx, by);
     }
     ctx.restore();
     ctx.globalAlpha = 1;
 
     // boss
-    if (bossAlive && bossPos){
+    if (bossAlive && bossCell) {
       ctx.save();
-      ctx.font = String(bossFont) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
-      var cx = bossPos.x * s + s/2, cy = bossPos.y * s + s/2;
-      ctx.shadowColor = "#0aff73"; ctx.shadowBlur = 16;
+      ctx.font = String(bossFontPx) + "px system-ui, Apple Color Emoji, Segoe UI Emoji";
+      const cx = bossCell.x * s + s / 2;
+      const cy = bossCell.y * s + s / 2;
+      ctx.shadowColor = "#0aff73";
+      ctx.shadowBlur = 16;
       ctx.fillText(boss.emoji, cx, cy);
       ctx.restore();
     }
 
-    // snake: head circle, body rounded
-    for (var k=snake.length-1;k>=0;k--){
-      var seg = snake[k], x = seg.x*s, y = seg.y*s, r = Math.max(4, Math.floor(s*0.28));
-      if (k === 0){
-        // head circle
-        var hcX = x + s/2, hcY = y + s/2;
+    // snake
+    for (let k = snake.length - 1; k >= 0; k--) {
+      const seg = snake[k];
+      const x = seg.x * s;
+      const y = seg.y * s;
+      const radius = Math.max(4, Math.floor(s * 0.28));
+
+      if (k === 0) {
+        // head
+        const hx = x + s / 2;
+        const hy = y + s / 2;
         ctx.fillStyle = "#73ffa1";
-        ctx.beginPath(); ctx.arc(hcX, hcY, (s/2)-1, 0, Math.PI*2); ctx.fill();
-        if (s >= 18){
+        ctx.beginPath();
+        ctx.arc(hx, hy, s / 2 - 1, 0, Math.PI * 2);
+        ctx.fill();
+        if (s >= 18) {
           ctx.fillStyle = "#0b1a14";
-          var rr = Math.max(1.5, s*0.05);
-          ctx.beginPath(); ctx.arc(hcX - s*0.2, hcY - s*0.15, rr, 0, Math.PI*2); ctx.fill();
-          ctx.beginPath(); ctx.arc(hcX + s*0.2, hcY - s*0.15, rr, 0, Math.PI*2); ctx.fill();
+          const eyeR = Math.max(1.5, s * 0.05);
+          ctx.beginPath(); ctx.arc(hx - s * 0.2, hy - s * 0.15, eyeR, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(hx + s * 0.2, hy - s * 0.15, eyeR, 0, Math.PI * 2); ctx.fill();
         }
-      } else {
+      } else if (k === snake.length - 1 && snake.length > 1) {
+        // tail triangle pointing away from previous segment
+        const prev = snake[k - 1];
+        const dx = Math.sign(prev.x - seg.x);
+        const dy = Math.sign(prev.y - seg.y);
+        const cx = x + s / 2;
+        const cy = y + s / 2;
+        const tipLen = Math.max(6, Math.floor(s * 0.4));
         ctx.fillStyle = "rgba(115,255,161,0.9)";
-        roundRect(ctx, x+1, y+1, s-2, s-2, r); ctx.fill();
+        ctx.beginPath();
+        if (Math.abs(dx) > Math.abs(dy)) {
+          const dir = dx >= 0 ? 1 : -1;
+          ctx.moveTo(cx - dir * tipLen / 2, cy - s / 2 + 2);
+          ctx.lineTo(cx - dir * tipLen / 2, cy + s / 2 - 2);
+          ctx.lineTo(cx + dir * tipLen / 2, cy);
+        } else {
+          const dir = dy >= 0 ? 1 : -1;
+          ctx.moveTo(cx - s / 2 + 2, cy - dir * tipLen / 2);
+          ctx.lineTo(cx + s / 2 - 2, cy - dir * tipLen / 2);
+          ctx.lineTo(cx, cy + dir * tipLen / 2);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // body
+        ctx.fillStyle = "rgba(115,255,161,0.9)";
+        roundRect(ctx, x + 1, y + 1, s - 2, s - 2, radius);
+        ctx.fill();
       }
     }
   }
-  function roundRect(c,x,y,w,h,r){
+
+  function roundRect(c, x, y, w, h, r) {
     c.beginPath();
-    c.moveTo(x+r,y);
-    c.arcTo(x+w,y,x+w,y+h,r);
-    c.arcTo(x+w,y+h,x,y+h,r);
-    c.arcTo(x,y+h,x,y,r);
-    c.arcTo(x,y,x+w,y,r);
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y,     x + w, y + h, r);
+    c.arcTo(x + w, y + h, x,     y + h, r);
+    c.arcTo(x,     y + h, x,     y,     r);
+    c.arcTo(x,     y,     x + w, y,     r);
     c.closePath();
   }
 
-  // HUD / input
-  function updateHUD(speedChanged){
-    if (speedChanged === void 0) speedChanged = false;
+  // -----------------------------
+  // Section: HUD + Input Binding
+  // -----------------------------
+
+  function updateHUD(speedChanged = false) {
     scoreEl.textContent = String(score);
     bestEl.textContent = String(best);
     speedEl.textContent = (START_SPEED_MS / speedMs).toFixed(1) + "x";
-    if (speedChanged) speedEl.animate([{opacity:.3},{opacity:1}],{duration:150});
+    if (speedChanged) speedEl.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: 150 });
     levelEl.textContent = level + "/5";
   }
-  function bindControls(){
-    dirBtns.forEach(function(btn){
-      var d = btn.dataset.dir;
-      function h(e){
-        e.preventDefault();
-        if (d==="up") setDir(0,-1);
-        if (d==="down") setDir(0,1);
-        if (d==="left") setDir(-1,0);
-        if (d==="right") setDir(1,0);
-      }
-      btn.addEventListener("touchstart",h,{passive:false});
-      btn.addEventListener("pointerdown",h);
-    });
-    startBtn.addEventListener("click", function(){ reset(); start(); });
-    pauseTopBtn.addEventListener("click", function(){ pauseToggle(); });
-    pauseBtn.addEventListener("click", function(){ pauseToggle(); });
 
-    window.addEventListener("keydown", function(e){
-      var k = e.key.toLowerCase();
-      if (k==="arrowup"||k==="w") setDir(0,-1);
-      else if (k==="arrowdown"||k==="s") setDir(0,1);
-      else if (k==="arrowleft"||k==="a") setDir(-1,0);
-      else if (k==="arrowright"||k==="d") setDir(1,0);
-      else if (k===" "||k==="enter"){ if(!running){ reset(); start(); } else pauseToggle(); }
-    });
+function bindControls() {
+  // Labels
+  if (startBtn) startBtn.textContent = "▶️ Start";
+  if (pauseTopBtn) pauseTopBtn.textContent = "⏹️ Pause";
 
-    // Swipe
-    var touchStart = null, SWIPE_MIN = 18;
-    function onTouchStart(e){ var t=e.changedTouches?e.changedTouches[0]:e; touchStart={x:t.clientX,y:t.clientY}; }
-    function onTouchEnd(e){
-      if(!touchStart) return;
-      var t=e.changedTouches?e.changedTouches[0]:e;
-      var dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
-      if(Math.abs(dx)<SWIPE_MIN && Math.abs(dy)<SWIPE_MIN) return;
-      if(Math.abs(dx)>Math.abs(dy)) setDir(Math.sign(dx),0); else setDir(0,Math.sign(dy));
-      touchStart=null;
+  // --- Pad-only input (with knob) ---
+  const padEl = document.querySelector('#pad');
+  if (padEl) {
+    // Ensure knob exists
+    let knob = padEl.querySelector('.knob');
+    if (!knob) {
+      knob = document.createElement('div');
+      knob.className = 'knob';
+      padEl.appendChild(knob);
     }
-    canvas.addEventListener("touchstart", onTouchStart, {passive:true});
-    canvas.addEventListener("touchend", onTouchEnd, {passive:true});
+
+    let active = false;
+
+    // Max knob travel (px) from center
+    const MAX_TRAVEL = 36;
+
+    const setKnob = (dx, dy) => {
+      // Clamp distance to MAX_TRAVEL
+      const len = Math.hypot(dx, dy) || 1;
+      const scale = Math.min(1, MAX_TRAVEL / len);
+      const kx = dx * scale;
+      const ky = dy * scale;
+      knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+    };
+
+    const chooseDirFromVector = (dx, dy) => {
+      if (Math.abs(dx) > Math.abs(dy)) setDirection(Math.sign(dx), 0);
+      else setDirection(0, Math.sign(dy));
+    };
+
+    const start = (clientX, clientY) => {
+      active = true;
+      padEl.classList.add('active');
+      const r = padEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      setKnob(dx, dy);
+      chooseDirFromVector(dx, dy);
+    };
+
+    const move = (clientX, clientY) => {
+      if (!active) return;
+      const r = padEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      setKnob(dx, dy);
+      chooseDirFromVector(dx, dy);
+    };
+
+    const end = () => {
+      if (!active) return;
+      active = false;
+      padEl.classList.remove('active');
+      knob.style.transform = 'translate(-50%, -50%)'; // snap back to center
+    };
+
+    // Touch
+    padEl.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      start(t.clientX, t.clientY);
+    }, { passive: true });
+
+    padEl.addEventListener('touchmove', (e) => {
+      const t = e.changedTouches[0];
+      move(t.clientX, t.clientY);
+    }, { passive: true });
+
+    padEl.addEventListener('touchend', end, { passive: true });
+    padEl.addEventListener('touchcancel', end, { passive: true });
+
+    // Mouse / Pen
+    padEl.addEventListener('pointerdown', (e) => start(e.clientX, e.clientY));
+    padEl.addEventListener('pointermove', (e) => move(e.clientX, e.clientY));
+    padEl.addEventListener('pointerup', end);
+    padEl.addEventListener('pointerleave', end);
+  } else {
+    console.warn('#pad not found — add <div id="pad"><div class="knob"></div></div> inside .game-wrap');
   }
 
-  // Init
-  function init(){ bestEl.textContent = String(best); fitCanvas(); reset(); bindControls(); draw(); }
-  window.addEventListener("resize", function(){
-    var prev = grid;
-    fitCanvas();
-    snake = snake.map(function(seg){
-      return {
-        x: Math.min(grid.cols-1, Math.round(seg.x*grid.cols/prev.cols)),
-        y: Math.min(grid.rows-1, Math.round(seg.y*grid.rows/prev.rows))
-      };
-    });
-    seedDecor();
-    draw();
+  // Start & Pause
+  if (startBtn) startBtn.addEventListener("click", () => { resetGame(); startGame(); });
+  if (pauseTopBtn) pauseTopBtn.addEventListener("click", () => { togglePause(); });
+
+  // Keyboard + canvas swipe (keep)
+  window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "arrowup" || k === "w") setDirection(0, -1);
+    else if (k === "arrowdown" || k === "s") setDirection(0, 1);
+    else if (k === "arrowleft" || k === "a") setDirection(-1, 0);
+    else if (k === "arrowright" || k === "d") setDirection(1, 0);
+    else if (k === " " || k === "enter") {
+      if (!running) { resetGame(); startGame(); } else { togglePause(); }
+    }
   });
-  setInterval(function(){ if (running && !paused) maybeSpawnBug(); }, 250);
+
+  let touchStart = null, SWIPE_MIN = 18;
+  function onTouchStart(e){ const t=e.changedTouches?e.changedTouches[0]:e; touchStart={x:t.clientX,y:t.clientY}; }
+  function onTouchEnd(e){
+    if(!touchStart) return;
+    const t=e.changedTouches?e.changedTouches[0]:e;
+    const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+    if(Math.abs(dx)<SWIPE_MIN && Math.abs(dy)<SWIPE_MIN) return;
+    if(Math.abs(dx)>Math.abs(dy)) setDirection(Math.sign(dx),0); else setDirection(0,Math.sign(dy));
+    touchStart=null;
+  }
+  canvas.addEventListener("touchstart", onTouchStart, {passive:true});
+  canvas.addEventListener("touchend", onTouchEnd, {passive:true});
+}
+
+  // -----------------------------
+  // Section: Initialization & Resize
+  // -----------------------------
+
+  function init() {
+    bestEl.textContent = String(best);
+    fitCanvasToElement();
+    resetGame();
+    bindControls();
+    drawFrame();
+    startGame();
+  }
+
+  window.addEventListener("resize", () => {
+    const prev = grid;
+    fitCanvasToElement();
+    snake = snake.map((seg) => ({
+      x: Math.min(grid.cols - 1, Math.round((seg.x * grid.cols) / prev.cols)),
+      y: Math.min(grid.rows - 1, Math.round((seg.y * grid.rows) / prev.rows)),
+    }));
+    seedDecor();
+    drawFrame();
+  });
+
+  setInterval(() => { if (running && !paused) maybeSpawnBug(); }, 250);
+
   init();
 })();
