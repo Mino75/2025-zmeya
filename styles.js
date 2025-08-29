@@ -108,6 +108,60 @@
     100%{opacity:0; transform:translate(-50%,-140%) scale(1.05)}
   }
 
+/* Direction pad – crisp crosshair + knob */
+#pad{
+  position: fixed;
+  left: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  /* Use even dimensions to avoid half-pixel fuzz on DPR devices */
+  width: 140px;
+  height: 140px;
+  border-radius: 16px;
+  border: 2px solid var(--accent);
+  /* Slightly more opaque so the canvas grid doesn’t show through too much */
+  background: rgba(10,14,12,0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
+  touch-action: none; /* important for pointer/touch */
+  z-index: 40;
+  overflow: hidden; /* clip knob glow neatly */
+}
+
+/* Crisp crosshair using background gradients (no half-pixel transforms) */
+#pad {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.28), rgba(255,255,255,.28)),
+    linear-gradient(to bottom, rgba(255,255,255,.28), rgba(255,255,255,.28)),
+    radial-gradient(120px 120px at center, transparent 0, transparent 48%, rgba(255,255,255,.06) 48%, rgba(255,255,255,.06) 49%, transparent 49%);
+  background-size: 2px 100%, 100% 2px, 100% 100%;
+  background-position: 50% 0, 0 50%, 0 0;
+  background-repeat: no-repeat;
+}
+
+/* The draggable “thumb/knob” */
+#pad .knob{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), rgba(255,255,255,.06));
+  border: 2px solid var(--accent-2);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35), 0 0 10px rgba(89,208,255,.35);
+  pointer-events: none; /* never intercept input */
+  transition: transform 120ms ease; /* snap back to center on release */
+}
+
+#pad.active .knob{
+  /* while dragging, movement is handled by JS (no transition) */
+  transition: none;
+}
+
+
+
   @media (min-width:900px){ .controls{display:none} }
   `;
   const style = document.createElement('style');
