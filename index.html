@@ -32,6 +32,11 @@
     <main class="main">
       <div id="game-wrap" class="game-wrap">
         <canvas id="game" width="360" height="540" aria-label="Snake playfield"></canvas>
+        <!-- Virtual direction pad (mobile only) -->
+        <div id="pad" aria-label="Direction pad">
+  <div class="knob" aria-hidden="true"></div>
+</div>
+
 
         <!-- Overlay messages -->
         <div id="overlay" class="overlay" aria-live="polite"></div>
@@ -39,22 +44,11 @@
         <!-- Floating toasts for names -->
         <div id="toasts" class="toasts"></div>
 
-        <!-- On-screen controls (mobile-first) -->
-        <div id="controls" class="controls" aria-label="Touch Controls">
-          <button class="btn dir up" data-dir="up" aria-label="Move Up">▲</button>
-          <div class="mid-row">
-            <button class="btn dir left" data-dir="left" aria-label="Move Left">◀</button>
-            <button class="btn action pause" id="pauseBtn" aria-label="Pause/Resume">⏯</button>
-            <button class="btn dir right" data-dir="right" aria-label="Move Right">▶</button>
-          </div>
-          <button class="btn dir down" data-dir="down" aria-label="Move Down">▼</button>
-        </div>
-      </div>
 
       <section class="panel">
         <div class="row">
-          <button id="startBtn" class="btn primary" aria-label="Start or Restart">Start / Restart</button>
-          <button id="pauseTop" class="btn ghost" aria-label="Pause/Resume">Pause</button>
+          <button id="startBtn" class="btn primary" aria-label="Start or Restart"> ▶️ Start / Restart</button>
+          <button id="pauseTop" class="btn ghost" aria-label="Pause/Resume"> ⏹️ Pause</button>
         </div>
         <details class="tips">
           <summary>How to play</summary>
@@ -70,7 +64,7 @@
     </main>
 
     <footer class="footer">
-      <small>zmeya </small>
+      <small>zmeya • vanilla JS • mobile-first</small>
     </footer>
   </div>
 
@@ -78,6 +72,3 @@
   <script src="./main.js"></script>
 </body>
 </html>
-
-
-
