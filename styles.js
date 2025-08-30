@@ -16,14 +16,26 @@
   }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0;
-    overflow:hidden; /* keep the whole playfield in view */
-    background: radial-gradient(1200px 800px at 10% -10%, #12202a 0%, transparent 35%),
-                radial-gradient(800px 600px at 100% 10%, #1b242e 0%, transparent 30%), var(--bg);
-    color:var(--ink);
-    font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-  }
+  
+html, body {
+  height: 100%; 
+  margin: 0; 
+  background: #050a16; 
+  color: var(--ui-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  touch-action: manipulation;
+}
+
+#frame {
+  position: relative; 
+  margin: 0 auto;
+  width: calc(var(--base-stage-width) * var(--scale) * 1px);
+  height: calc((var(--base-hud-height) + var(--base-stage-height)) * var(--scale) * 1px);
+  display: grid; 
+  grid-template-rows: var(--hud-height) var(--stage-height); 
+  place-items: start center;
+}
+
   .topbar{
     display:flex; align-items:center; justify-content:space-between;
     padding:10px clamp(12px, 4vw, 24px);
@@ -168,3 +180,4 @@
   style.textContent = css;
   document.head.appendChild(style);
 })();
+
