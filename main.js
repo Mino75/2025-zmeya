@@ -1,16 +1,11 @@
+
 'use strict';
 
 /*
- ZMEYA — Emoji Snake (Verbose Edition)
- ------------------------------------
- Fully cleaned version: pad-only controls, no arrow cluster.
+ ZMEYA — Modified Edition (joystick diagonals + moving bugs + knob on right via CSS)
 */
 
-(function ZmeyaVerboseIIFE() {
-  // -----------------------------
-  // Section: Static Data
-  // -----------------------------
-
+(function ZmeyaModifiedIIFE() {
   const LANGS = ["mg", "fr", "cn", "jp", "ru"];
 
   const INSECTS = [
@@ -37,20 +32,21 @@
     { emoji: "🦖", names: { en: "T-Rex", fr: "tyrannosaure", cn: "霸王龙", jp: "ティラノサウルス", ru: "тираннозавр", mg: "tiranosoro" } },
   ];
 
-  const DECOR = ["🌸", "💮", "🪷", "🏵️", "🌾", "🌻", "🌼", "🌷"];
+  const DECOR = ["🍄", "🪷", "🏵️", "🌾", "🌻", "🌼", "🌷"];
 
-  // -----------------------------
-  // Section: Tunable Config
-  // -----------------------------
-
+  // Tunables
   const GROWTH_PER_BUG = 2;
   const START_SPEED_MS = 180;
   const MIN_SPEED_MS = 70;
   const SPEEDUP_PER_EAT = 6;
 
-  const MAX_BUGS = 6;
-  const BUG_TTL_SEC = 15;
+  const MAX_BUGS = 5;
+  const BUG_TTL_SEC = 20;
   const GRID_MIN = 12;
+
+  // NEW: bugs move randomly every N seconds (with jitter)
+  const BUG_MOVE_INTERVAL_SEC = 2.5;     // <— change this to tune
+  const BUG_MOVE_JITTER_SEC   = 0.8;     // randomize per-bug schedule a bit
 
   const LEVELS = [
     { n: 1, boss: null,      intro: "Warm-up. Eat 10 bugs to advance.",             eatGoal: 10 },
@@ -60,12 +56,7 @@
     { n: 5, boss: BOSSES[3], intro: "Final boss. Lasso the dino!",                   eatGoal: 0 },
   ];
 
-  // -----------------------------
-  // Section: DOM Handles
-  // -----------------------------
-
   const $ = (sel) => document.querySelector(sel);
-
   const canvas = $("#game");
   const ctx = canvas.getContext("2d");
 
@@ -78,11 +69,6 @@
 
   const startBtn    = $("#startBtn");
   const pauseTopBtn = $("#pauseTop");
-  const padEl       = $("#pad"); // NEW: the only on-screen control
-
-  // -----------------------------
-  // Section: Mutable Game State
-  // -----------------------------
 
   let grid = { cols: 24, rows: 36, size: 16 };
   let snake = [];
@@ -92,7 +78,7 @@
   let bugs = [];
   let decor = [];
   let score = 0;
-  let best = Number(localStorage.getItem("zmeyaHighScoreV1") || 0);
+  let best = Number(localStorage.getItem("zmeyaHighScoreV2") || 0); // version bump
   let speedMs = START_SPEED_MS;
 
   let rafHandle = null;
@@ -109,10 +95,6 @@
 
   let nextBugSpawnAtSec = 0;
 
-  // -----------------------------
-  // Section: Canvas Sizing & Grid
-  // -----------------------------
-
   function fitCanvasToElement() {
     const rect = canvas.getBoundingClientRect();
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -128,10 +110,6 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
   }
-
-  // -----------------------------
-  // Section: Small Utilities
-  // -----------------------------
 
   const randInt = (n) => Math.floor(Math.random() * n);
   const pick = (arr) => arr[randInt(arr.length)];
@@ -154,7 +132,6 @@
     return { x: Math.floor(grid.cols / 2), y: Math.floor(grid.rows / 2) };
   }
 
-  // overlay + toasts
   function showCard(title, desc, cta = "") {
     overlayEl.innerHTML =
       '<div class="card"><h2>' + title + '</h2><p>' + desc + '</p><p><em>' + cta + '</em></p></div>';
@@ -177,22 +154,15 @@
     return entry.names[lang] || entry.names.en;
   }
 
-  // -----------------------------
-  // Section: Decor
-  // -----------------------------
-
   function seedDecor() {
     decor = [];
     const baseByArea = Math.floor((grid.cols * grid.rows) / 120);
-    const minWanted = 15 + randInt(7);
+    const minWanted = 7 + randInt(7);
     const count = Math.max(minWanted, baseByArea);
-
-    // ≥ 3 cells apart
     const okDistance = (x, y) => decor.every((d) => {
       const dx = d.x - x, dy = d.y - y;
       return (dx * dx + dy * dy) >= 9;
     });
-
     for (let i = 0; i < count; i++) {
       let pos = null, tries = 0;
       while (tries++ < 500) {
@@ -204,25 +174,55 @@
     }
   }
 
-  // -----------------------------
-  // Section: Bugs (Edibles)
-  // -----------------------------
+  // BUGS ---------------------------------------------------
+  function scheduleBugMoveTime() {
+    return nowSec() + BUG_MOVE_INTERVAL_SEC + (Math.random() * 2 - 1) * BUG_MOVE_JITTER_SEC;
+  }
 
   function maybeSpawnBug() {
     const t = nowSec();
     if (t >= nextBugSpawnAtSec && bugs.length < MAX_BUGS) {
       const pos = pickEmptyCell(true);
       const entry = pick(INSECTS);
-      bugs.push({ x: pos.x, y: pos.y, entry, expiresAt: t + BUG_TTL_SEC });
+      bugs.push({ x: pos.x, y: pos.y, entry, expiresAt: t + BUG_TTL_SEC, nextMoveAt: scheduleBugMoveTime() });
       nextBugSpawnAtSec = t + (0.8 + Math.random() * 1.4);
     }
     bugs = bugs.filter((b) => b.expiresAt > t);
   }
 
-  // -----------------------------
-  // Section: Boss Handling
-  // -----------------------------
+  function isCellOccupied(x, y) {
+    return snake.some(s => s.x === x && s.y === y) ||
+           bugs.some(b => b.x === x && b.y === y) ||
+           (bossAlive && bossCell && bossCell.x === x && bossCell.y === y);
+  }
 
+  function maybeMoveBugs() {
+    const t = nowSec();
+    for (let i = 0; i < bugs.length; i++) {
+      const b = bugs[i];
+      if (t >= (b.nextMoveAt || 0)) {
+        // choose a random step in 8 directions (including diagonals)
+        const steps = [
+          [-1, 0],[1,0],[0,-1],[0,1],
+          [-1,-1],[1,-1],[-1,1],[1,1]
+        ];
+        // try up to 8 random directions to find a free cell
+        for (let tries = 0; tries < 8; tries++) {
+          const [dx, dy] = steps[randInt(steps.length)];
+          const nx = wrapX(b.x + dx);
+          const ny = wrapY(b.y + dy);
+          // allow moving onto previous bug cell; but avoid snake and boss
+          if (!snake.some(s => s.x === nx && s.y === ny) &&
+              !(bossAlive && bossCell && bossCell.x === nx && bossCell.y === ny)) {
+            b.x = nx; b.y = ny; break;
+          }
+        }
+        b.nextMoveAt = scheduleBugMoveTime();
+      }
+    }
+  }
+
+  // BOSSES -------------------------------------------------
   function pickEmptyCellWithMargin(margin) {
     let attempts = 0;
     while (attempts++ < 1000) {
@@ -243,32 +243,17 @@
     const plan = LEVELS[level - 1];
     if (!plan || !plan.boss) return;
     boss = plan.boss;
-    bossCell = pickEmptyCellWithMargin(4); // ≥4 from edges
+    bossCell = pickEmptyCellWithMargin(4);
     bossAlive = true;
   }
 
-// Boss is entangled if on each orthogonal side (L/R/U/D)
-// there is at least one snake segment at distance 1 or 2.
-// Toroidal wrapping still applies.
-function isBossEntangled() {
-  if (!bossAlive || !bossCell) return false;
-
-  const x = bossCell.x, y = bossCell.y;
-  const hasAt = (cx, cy) => snake.some(s => s.x === wrapX(cx) && s.y === wrapY(cy));
-
-  // side is blocked if distance 1 OR 2 in that direction has a snake segment
-  const blocked = (dx, dy) => (
-    hasAt(x + dx, y + dy) || hasAt(x + 2*dx, y + 2*dy)
-  );
-
-  return (
-    blocked(-1, 0) &&  // left
-    blocked( 1, 0) &&  // right
-    blocked( 0,-1) &&  // up
-    blocked( 0, 1)     // down
-  );
-}
-
+  function isBossEntangled() {
+    if (!bossAlive || !bossCell) return false;
+    const x = bossCell.x, y = bossCell.y;
+    const hasAt = (cx, cy) => snake.some(s => s.x === wrapX(cx) && s.y === wrapY(cy));
+    const blocked = (dx, dy) => ( hasAt(x + dx, y + dy) || hasAt(x + 2*dx, y + 2*dy) );
+    return blocked(-1,0) && blocked(1,0) && blocked(0,-1) && blocked(0,1);
+  }
 
   function defeatBoss() {
     bossAlive = false;
@@ -277,10 +262,7 @@ function isBossEntangled() {
     advanceLevel();
   }
 
-  // -----------------------------
-  // Section: Level Flow
-  // -----------------------------
-
+  // LEVEL FLOW --------------------------------------------
   function startLevel(n){
     level = n;
     levelEl.textContent = level + "/5";
@@ -288,7 +270,6 @@ function isBossEntangled() {
     bossAlive = false; boss = null; bossCell = null;
     const plan = LEVELS[level-1];
     if (plan && plan.boss) spawnBossIfNeeded();
-
     showCard("Level " + level, (plan && plan.intro) ? plan.intro : "", "");
     setTimeout(() => { if (!paused) clearCard(); }, 1200);
   }
@@ -297,7 +278,7 @@ function isBossEntangled() {
     if (level >= 5) {
       stopGameLoop();
       best = Math.max(best, score);
-      localStorage.setItem("zmeyaHighScoreV1", String(best));
+      localStorage.setItem("zmeyaHighScoreV2", String(best));
       updateHUD();
       showCard("You win! 🎉", 'Final Score: <span class="big">' + score + "</span>", "Start to play again");
       return;
@@ -305,10 +286,7 @@ function isBossEntangled() {
     startLevel(level + 1);
   }
 
-  // -----------------------------
-  // Section: Game Lifecycle
-  // -----------------------------
-
+  // GAME LIFECYCLE ----------------------------------------
   function resetGame() {
     score = 0;
     speedMs = START_SPEED_MS;
@@ -348,10 +326,7 @@ function isBossEntangled() {
     if (paused) showCard("Paused", "⏯ to resume"); else clearCard();
   }
 
-  // -----------------------------
-  // Section: Main Loop
-  // -----------------------------
-
+  // LOOP ---------------------------------------------------
   function scheduleLoop() {
     function step(t) {
       if (!running) return;
@@ -364,10 +339,17 @@ function isBossEntangled() {
     rafHandle = requestAnimationFrame(step);
   }
 
-  function setDirection(x, y) { nextDir = { x, y }; }
+  function setDirection(x, y) {
+    // Normalize to {-1,0,1} and allow diagonals; ignore 0,0
+    const nx = Math.max(-1, Math.min(1, Math.round(x)));
+    const ny = Math.max(-1, Math.min(1, Math.round(y)));
+    if (nx === 0 && ny === 0) return;
+    nextDir = { x: nx, y: ny };
+  }
 
   function tick() {
     maybeSpawnBug();
+    maybeMoveBugs(); // NEW: move bugs on their schedules
 
     dir = nextDir;
 
@@ -407,19 +389,16 @@ function isBossEntangled() {
     drawFrame();
   }
 
-  function gameOver(reason) {
-    stopGameLoop();
-    best = Math.max(best, score);
-    localStorage.setItem("zmeyaHighScoreV1", String(best));
-    updateHUD();
-    showCard("Game Over 💀", String(reason), "Tap Start / Restart");
-    try { vibrate(80); } catch (_) {}
-  }
+function gameOver(reason) {
+  stopGameLoop();
+  best = Math.max(best, score);
+  localStorage.setItem("zmeyaHighScoreV2", String(best)); // ou "zmeyaHighScoreV1" si tu veux garder l’ancienne clé
+  updateHUD();
+  showCard("Game Over 💀", String(reason), "Tap Start / Restart");
+  try { vibrate(80); } catch (_) {}
+}
 
-  // -----------------------------
-  // Section: Rendering
-  // -----------------------------
-
+  // RENDER -------------------------------------------------
   function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
   function drawFrame() {
@@ -480,7 +459,6 @@ function isBossEntangled() {
       const radius = Math.max(4, Math.floor(s * 0.28));
 
       if (k === 0) {
-        // head
         const hx = x + s / 2;
         const hy = y + s / 2;
         ctx.fillStyle = "#73ffa1";
@@ -494,7 +472,6 @@ function isBossEntangled() {
           ctx.beginPath(); ctx.arc(hx + s * 0.2, hy - s * 0.15, eyeR, 0, Math.PI * 2); ctx.fill();
         }
       } else if (k === snake.length - 1 && snake.length > 1) {
-        // tail triangle pointing away from previous segment
         const prev = snake[k - 1];
         const dx = Math.sign(prev.x - seg.x);
         const dy = Math.sign(prev.y - seg.y);
@@ -517,7 +494,6 @@ function isBossEntangled() {
         ctx.closePath();
         ctx.fill();
       } else {
-        // body
         ctx.fillStyle = "rgba(115,255,161,0.9)";
         roundRect(ctx, x + 1, y + 1, s - 2, s - 2, radius);
         ctx.fill();
@@ -535,10 +511,7 @@ function isBossEntangled() {
     c.closePath();
   }
 
-  // -----------------------------
-  // Section: HUD + Input Binding
-  // -----------------------------
-
+  // INPUT / HUD -------------------------------------------
   function updateHUD(speedChanged = false) {
     scoreEl.textContent = String(score);
     bestEl.textContent = String(best);
@@ -547,128 +520,136 @@ function isBossEntangled() {
     levelEl.textContent = level + "/5";
   }
 
-function bindControls() {
-  // Labels
-  if (startBtn) startBtn.textContent = "▶️ Start";
-  if (pauseTopBtn) pauseTopBtn.textContent = "⏹️ Pause";
+  function bindControls() {
 
-  // --- Pad-only input (with knob) ---
-  const padEl = document.querySelector('#pad');
-  if (padEl) {
-    // Ensure knob exists
-    let knob = padEl.querySelector('.knob');
-    if (!knob) {
-      knob = document.createElement('div');
-      knob.className = 'knob';
-      padEl.appendChild(knob);
+    // --- Joystick sensitivity tuning ---
+    const DEADZONE_PX = 6;        // ignore tiny movements near the center
+    const DIAG_THRESHOLD = 0.55;  // 0.3 = diagonals easy, 0.8 = diagonals hard
+
+    if (startBtn) startBtn.textContent = "▶️ Start";
+    if (pauseTopBtn) pauseTopBtn.textContent = "⏹️ Pause";
+
+    const padEl = document.querySelector('#pad');
+    if (padEl) {
+      let knob = padEl.querySelector('.knob');
+      if (!knob) {
+        knob = document.createElement('div');
+        knob.className = 'knob';
+        padEl.appendChild(knob);
+      }
+
+      let active = false;
+      const MAX_TRAVEL = 36;
+
+      const setKnob = (dx, dy) => {
+        const len = Math.hypot(dx, dy) || 1;
+        const scale = Math.min(1, MAX_TRAVEL / len);
+        const kx = dx * scale;
+        const ky = dy * scale;
+        knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+      };
+
+      const chooseDirFromVector = (dx, dy) => {
+        const ax = Math.abs(dx), ay = Math.abs(dy);
+
+        // 1. Deadzone: no direction if close to center
+        if (ax < DEADZONE_PX && ay < DEADZONE_PX) return;
+
+        // 2. Strong preference for horizontal/vertical
+        if (ax >= ay * (1 + DIAG_THRESHOLD)) {
+          setDirection(Math.sign(dx), 0);   // horizontal
+        } else if (ay >= ax * (1 + DIAG_THRESHOLD)) {
+          setDirection(0, Math.sign(dy));   // vertical
+        } else {
+          // 3. Only when angle is close to 45°: allow diagonal
+          setDirection(Math.sign(dx), Math.sign(dy));
+        }
+      };
+      const start = (clientX, clientY) => {
+        active = true;
+        padEl.classList.add('active');
+        const r = padEl.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        setKnob(dx, dy);
+        chooseDirFromVector(dx, dy);
+      };
+
+      const move = (clientX, clientY) => {
+        if (!active) return;
+        const r = padEl.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        setKnob(dx, dy);
+        chooseDirFromVector(dx, dy);
+      };
+
+      const end = () => {
+        if (!active) return;
+        active = false;
+        padEl.classList.remove('active');
+        knob.style.transform = 'translate(-50%, -50%)';
+      };
+
+      // Touch
+      padEl.addEventListener('touchstart', (e) => {
+        const t = e.changedTouches[0];
+        start(t.clientX, t.clientY);
+      }, { passive: true });
+
+      padEl.addEventListener('touchmove', (e) => {
+        const t = e.changedTouches[0];
+        move(t.clientX, t.clientY);
+      }, { passive: true });
+
+      padEl.addEventListener('touchend', end, { passive: true });
+      padEl.addEventListener('touchcancel', end, { passive: true });
+
+      // Mouse / Pen
+      padEl.addEventListener('pointerdown', (e) => start(e.clientX, e.clientY));
+      padEl.addEventListener('pointermove', (e) => move(e.clientX, e.clientY));
+      padEl.addEventListener('pointerup', end);
+      padEl.addEventListener('pointerleave', end);
+    } else {
+      console.warn('#pad not found — add <div id="pad"><div class="knob"></div></div> inside .game-wrap');
     }
 
-    let active = false;
+    // Start & Pause
+    if (startBtn) startBtn.addEventListener("click", () => { resetGame(); startGame(); });
+    if (pauseTopBtn) pauseTopBtn.addEventListener("click", () => { togglePause(); });
 
-    // Max knob travel (px) from center
-    const MAX_TRAVEL = 36;
+    // Keyboard (cardinal only to keep it simple); space toggles
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowup" || k === "w") setDirection(0, -1);
+      else if (k === "arrowdown" || k === "s") setDirection(0, 1);
+      else if (k === "arrowleft" || k === "a") setDirection(-1, 0);
+      else if (k === "arrowright" || k === "d") setDirection(1, 0);
+      else if (k === " " || k === "enter") {
+        if (!running) { resetGame(); startGame(); } else { togglePause(); }
+      }
+    });
 
-    const setKnob = (dx, dy) => {
-      // Clamp distance to MAX_TRAVEL
-      const len = Math.hypot(dx, dy) || 1;
-      const scale = Math.min(1, MAX_TRAVEL / len);
-      const kx = dx * scale;
-      const ky = dy * scale;
-      knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
-    };
-
-    const chooseDirFromVector = (dx, dy) => {
-      if (Math.abs(dx) > Math.abs(dy)) setDirection(Math.sign(dx), 0);
-      else setDirection(0, Math.sign(dy));
-    };
-
-    const start = (clientX, clientY) => {
-      active = true;
-      padEl.classList.add('active');
-      const r = padEl.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const dx = clientX - cx;
-      const dy = clientY - cy;
-      setKnob(dx, dy);
-      chooseDirFromVector(dx, dy);
-    };
-
-    const move = (clientX, clientY) => {
-      if (!active) return;
-      const r = padEl.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const dx = clientX - cx;
-      const dy = clientY - cy;
-      setKnob(dx, dy);
-      chooseDirFromVector(dx, dy);
-    };
-
-    const end = () => {
-      if (!active) return;
-      active = false;
-      padEl.classList.remove('active');
-      knob.style.transform = 'translate(-50%, -50%)'; // snap back to center
-    };
-
-    // Touch
-    padEl.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      start(t.clientX, t.clientY);
-    }, { passive: true });
-
-    padEl.addEventListener('touchmove', (e) => {
-      const t = e.changedTouches[0];
-      move(t.clientX, t.clientY);
-    }, { passive: true });
-
-    padEl.addEventListener('touchend', end, { passive: true });
-    padEl.addEventListener('touchcancel', end, { passive: true });
-
-    // Mouse / Pen
-    padEl.addEventListener('pointerdown', (e) => start(e.clientX, e.clientY));
-    padEl.addEventListener('pointermove', (e) => move(e.clientX, e.clientY));
-    padEl.addEventListener('pointerup', end);
-    padEl.addEventListener('pointerleave', end);
-  } else {
-    console.warn('#pad not found — add <div id="pad"><div class="knob"></div></div> inside .game-wrap');
-  }
-
-  // Start & Pause
-  if (startBtn) startBtn.addEventListener("click", () => { resetGame(); startGame(); });
-  if (pauseTopBtn) pauseTopBtn.addEventListener("click", () => { togglePause(); });
-
-  // Keyboard + canvas swipe (keep)
-  window.addEventListener("keydown", (e) => {
-    const k = e.key.toLowerCase();
-    if (k === "arrowup" || k === "w") setDirection(0, -1);
-    else if (k === "arrowdown" || k === "s") setDirection(0, 1);
-    else if (k === "arrowleft" || k === "a") setDirection(-1, 0);
-    else if (k === "arrowright" || k === "d") setDirection(1, 0);
-    else if (k === " " || k === "enter") {
-      if (!running) { resetGame(); startGame(); } else { togglePause(); }
+    // Canvas swipe (still works; cardinal from swipe direction)
+    let touchStart = null, SWIPE_MIN = 18;
+    function onTouchStart(e){ const t=e.changedTouches?e.changedTouches[0]:e; touchStart={x:t.clientX,y:t.clientY}; }
+    function onTouchEnd(e){
+      if(!touchStart) return;
+      const t=e.changedTouches?e.changedTouches[0]:e;
+      const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
+      if(Math.abs(dx)<SWIPE_MIN && Math.abs(dy)<SWIPE_MIN) return;
+      if(Math.abs(dx)>Math.abs(dy)) setDirection(Math.sign(dx),0); else setDirection(0,Math.sign(dy));
+      touchStart=null;
     }
-  });
-
-  let touchStart = null, SWIPE_MIN = 18;
-  function onTouchStart(e){ const t=e.changedTouches?e.changedTouches[0]:e; touchStart={x:t.clientX,y:t.clientY}; }
-  function onTouchEnd(e){
-    if(!touchStart) return;
-    const t=e.changedTouches?e.changedTouches[0]:e;
-    const dx=t.clientX-touchStart.x, dy=t.clientY-touchStart.y;
-    if(Math.abs(dx)<SWIPE_MIN && Math.abs(dy)<SWIPE_MIN) return;
-    if(Math.abs(dx)>Math.abs(dy)) setDirection(Math.sign(dx),0); else setDirection(0,Math.sign(dy));
-    touchStart=null;
+    canvas.addEventListener("touchstart", onTouchStart, {passive:true});
+    canvas.addEventListener("touchend", onTouchEnd, {passive:true});
   }
-  canvas.addEventListener("touchstart", onTouchStart, {passive:true});
-  canvas.addEventListener("touchend", onTouchEnd, {passive:true});
-}
 
-  // -----------------------------
-  // Section: Initialization & Resize
-  // -----------------------------
-
+  // INIT / RESIZE -----------------------------------------
   function init() {
     bestEl.textContent = String(best);
     fitCanvasToElement();
