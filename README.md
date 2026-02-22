@@ -14,7 +14,7 @@
 - [📄 License](#-license)
 
 ## 📖 About
-Zmeya is a modern snake game Progressive Web App featuring innovative gameplay mechanics with moving bugs, boss battles, and multilingual educational elements. Built with vanilla JavaScript and featuring advanced caching strategies for reliable offline play.
+Zmeya змея  (snake) is a modern snake game Progressive Web App featuring innovative gameplay mechanics with moving bugs, boss battles, and multilingual educational elements. Built with vanilla JavaScript and featuring advanced caching strategies for reliable offline play.
 
 ## 🚀 Getting Started
 
